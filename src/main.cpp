@@ -1,98 +1,106 @@
 // Copyright 2021 NNTU-CS
 
-int countPairs1(int *arr, int len, int value) {
-    int count = 0;
-    for (int i = 0; i < len; i++) {
-        for (int j = i + 1; j < len; j++) {
-            if (arr[i] + arr[j] == value) {
-                count++;
-            }
-        }
+#include <iostream>
+#include <chrono>
+#include <random>
+#include <algorithm>
+#include <vector>
+#include <fstream>
+ 
+int countPairs1(int *arr, int len, int value);
+int countPairs2(int *arr, int len, int value);
+int countPairs3(int *arr, int len, int value);
+
+int* generateSortedArray(int size, int maxValue = 1000) {
+    int* arr = new int[size];
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, maxValue);
+
+    for (int i = 0; i < size; i++) {
+        arr[i] = dis(gen);
     }
-    return count;
+    std::sort(arr, arr + size);
+    return arr;
 }
 
-int countPairs2(int *arr, int len, int value) {
-    int count = 0;
-
-    for (int i = 0; i < len - 1; i++) {
-        int target = value - arr[i];
-
-        int first = -1;
-        int left1 = i + 1;
-        int right1 = len - 1;
-        while (left1 <= right1) {
-            int mid = left1 + (right1 - left1) / 2;
-            if (arr[mid] == target) {
-                first = mid;
-                right1 = mid - 1;
-            } else if (arr[mid] < target) {
-                left1 = mid + 1;
-            } else {
-                right1 = mid - 1;
-            }
-        }
-
-        if (first != -1) {
-            int last = -1;
-            int left2 = i + 1;
-            int right2 = len - 1;
-            while (left2 <= right2) {
-                int mid = left2 + (right2 - left2) / 2;
-                if (arr[mid] == target) {
-                    last = mid;
-                    left2 = mid + 1;
-                } else if (arr[mid] < target) {
-                    left2 = mid + 1;
-                } else {
-                    right2 = mid - 1;
-                }
-            }
-
-            count += (last - first + 1);
-        }
-    }
-
-    return count;
+int64_t measureTime(int (*func)(int*, int, int), int* arr,
+                    int len, int value) {
+    auto start = std::chrono::high_resolution_clock::now();
+    func(arr, len, value);
+    auto end = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+        end - start).count();
 }
 
-int countPairs3(int *arr, int len, int value) {
-    int count = 0;
-    int left = 0;
-    int right = len - 1;
+int main() {
+    std::cout << "Исследование зависимости времени выполнения "
+              << "от размера массива\n";
+    std::cout << "============================================\n\n";
 
-    while (left < right) {
-        int sum = arr[left] + arr[right];
-        if (sum == value) {
-            int leftVal = arr[left];
-            int rightVal = arr[right];
+    std::cout << "Проверка корректности работы функций:\n";
+    int testArr[] = {20, 20, 30, 30, 40, 40};
+    int testLen = 6;
+    int testValue = 50;
 
-            if (leftVal == rightVal) {
-                int n = right - left + 1;
-                count += n * (n - 1) / 2;
-                break;
-            } else {
-                int leftCount = 1;
-                while (left + 1 < right && arr[left + 1] == leftVal) {
-                    leftCount++;
-                    left++;
-                }
+    int result1 = countPairs1(testArr, testLen, testValue);
+    int result2 = countPairs2(testArr, testLen, testValue);
+    int result3 = countPairs3(testArr, testLen, testValue);
 
-                int rightCount = 1;
-                while (right - 1 > left && arr[right - 1] == rightVal) {
-                    rightCount++;
-                    right--;
-                }
-
-                count += leftCount * rightCount;
-                left++;
-                right--;
-            }
-        } else if (sum < value) {
-            left++;
-        } else {
-            right--;
-        }
+    std::cout << "Массив: ";
+    for (int i = 0; i < testLen; i++) {
+        std::cout << testArr[i] << " ";
     }
-    return count;
+    std::cout << "\nИскомое значение: " << testValue << "\n";
+    std::cout << "countPairs1: " << result1 << "\n";
+    std::cout << "countPairs2: " << result2 << "\n";
+    std::cout << "countPairs3: " << result3 << "\n";
+    std::cout << "Результаты "
+              << ((result1 == result2 && result2 == result3) ?
+              "совпадают\n" : "НЕ совпадают\n");
+
+    std::vector<int> sizes;
+    for (int i = 1; i <= 20; i++) {
+        sizes.push_back(i * 100);
+    }
+
+    std::vector<int64_t> times1, times2, times3;
+
+    std::cout << "\nВыполнение измерений...\n";
+    std::cout << "Размер\t\tВремя1 (мкс)\tВремя2 (мкс)\t"
+              << "Время3 (мкс)\n";
+    std::cout << "----------------------------------------"
+              << "----------------\n";
+
+    for (int size : sizes) {
+        int* arr = generateSortedArray(size, 2000);
+        int value = 1000 + rand() % 1000;
+
+        int64_t t1 = measureTime(countPairs1, arr, size, value);
+        int64_t t2 = measureTime(countPairs2, arr, size, value);
+        int64_t t3 = measureTime(countPairs3, arr, size, value);
+
+        times1.push_back(t1);
+        times2.push_back(t2);
+        times3.push_back(t3);
+
+        std::cout << size << "\t\t" << t1 << "\t\t" << t2
+                  << "\t\t" << t3 << "\n";
+
+        delete[] arr;
+    }
+
+    std::ofstream dataFile("timing_data.txt");
+    dataFile << "# Size Time1 Time2 Time3\n";
+    for (size_t i = 0; i < sizes.size(); i++) {
+        dataFile << sizes[i] << " " << times1[i] << " "
+                 << times2[i] << " " << times3[i] << "\n";
+    }
+    dataFile.close();
+
+    std::cout << "\nДанные сохранены в файл timing_data.txt\n";
+    std::cout << "\nДля построения графиков используйте "
+              << "Python скрипт plot_graphs.py\n";
+
+    return 0;
 }
