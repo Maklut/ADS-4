@@ -23,7 +23,7 @@ int main() {
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, 1000);
 
-    for (int i = 0; i < size; ++i) {
+    for (int i = 0; i < size; i++) {
       arr[i] = dis(gen);
     }
     std::sort(arr.begin(), arr.end());
@@ -50,15 +50,11 @@ int main() {
     double time3 = std::chrono::duration_cast<
         std::chrono::microseconds>(end - start).count();
     times3.push_back(time3);
-
-    std::cout << "Size: " << size << " | Time1: " << time1
-              << " us | Time2: " << time2 << " us | Time3: " << time3
-              << " us\n";
   }
 
   std::ofstream dataFile("data.csv");
   dataFile << "size,time1,time2,time3\n";
-  for (size_t i = 0; i < sizes.size(); ++i) {
+  for (size_t i = 0; i < sizes.size(); i++) {
     dataFile << sizes[i] << "," << times1[i] << "," << times2[i] << ","
              << times3[i] << "\n";
   }
